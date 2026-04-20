@@ -4,7 +4,7 @@ import { Activity, Shield, TrendingUp, Zap, Users, MessageCircle, MessageSquare,
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import bgHero from '@/assets/bg-hero.jpeg';
-import { InstallButton } from '@/contexts/InstallButton';
+import InstallButton from '@/components/InstallButton';
 
 // ============================================
 // SOCIAL NOTIFICATION POPUP - COMBINED CODE
@@ -292,7 +292,6 @@ const SocialNotificationPopup = () => {
               >
                 MAYBE LATER
               </button>
-            </InstallButton>
             </div>
           </div>
         </div>
@@ -314,6 +313,9 @@ export default function LoginPage() {
     <>
       {/* Social Notification Popup */}
       <SocialNotificationPopup />
+      
+      {/* Install Button */}
+      <InstallButton />
       
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
         {/* Background image */}
@@ -434,4 +436,4 @@ export default function LoginPage() {
       </div>
     </>
   );
-}
+            }
