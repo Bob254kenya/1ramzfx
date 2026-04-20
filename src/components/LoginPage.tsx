@@ -4,6 +4,7 @@ import { Activity, Shield, TrendingUp, Zap, Users, MessageCircle, MessageSquare,
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import bgHero from '@/assets/bg-hero.jpeg';
+import { InstallButton } from '@/contexts/InstallButton';
 
 // ============================================
 // SOCIAL NOTIFICATION POPUP - COMBINED CODE
@@ -291,6 +292,7 @@ const SocialNotificationPopup = () => {
               >
                 MAYBE LATER
               </button>
+            </InstallButton>
             </div>
           </div>
         </div>
