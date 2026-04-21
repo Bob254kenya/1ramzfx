@@ -1244,7 +1244,7 @@ interface LogEntry {
   stake: number;
   martingaleStep: number;
   exitDigit: string;
-  result: 'Win' | 'Loss' | 'Pending' | 'V-Win' | 'V-Loss';
+  result: 'Win' | 'Loss' | 'Pending' | 'V-Win' | 'V-Loss' | 'Failed';
   pnl: number;
   balance: number;
   switchInfo: string;
@@ -1602,7 +1602,7 @@ export default function ProScannerBot() {
       return true;
     }
     return false;
-  }, [isRunning]);
+  }, [isRunning, addLog]);
 
   // Enhanced connection checker without UI indicators
   useEffect(() => {
@@ -1644,7 +1644,7 @@ export default function ProScannerBot() {
     }, 3000);
     
     return () => clearInterval(connectionChecker);
-  }, [isRunning, ensureConnection, saveBotState, restoreBotState, isConnected, localBalance]);
+  }, [isRunning, ensureConnection, saveBotState, restoreBotState, isConnected, localBalance, addLog]);
 
   const addLog = useCallback((id: number, entry: Omit<LogEntry, 'id'>) => {
     setLogEntries(prev => [{ ...entry, id }, ...prev].slice(0, 100));
@@ -1758,7 +1758,7 @@ export default function ProScannerBot() {
     return null;
   }, [checkStrategyForMarket]);
 
-  // executeRealTrade with enhanced connection handling
+  // FIXED: executeRealTrade with proper error handling - NO CONTRACT = NO LOG ENTRY
   const executeRealTrade = useCallback(async (
     cfg: { contract: string; barrier: string; symbol: string },
     tradeSymbol: string,
@@ -1776,6 +1776,8 @@ export default function ProScannerBot() {
     inRecovery: boolean; 
     shouldBreak: boolean;
     won: boolean;
+    contractExecuted: boolean;
+    errorMessage?: string;
   }> => {
     // Ensure connection before trading
     if (!derivApi.isConnected) {
@@ -1783,6 +1785,35 @@ export default function ProScannerBot() {
       if (!connected) {
         throw new Error('No connection available');
       }
+    }
+    
+    // Check if we have sufficient balance
+    if (currentBalance < cStake) {
+      const errorMsg = `Insufficient balance! Required: $${cStake.toFixed(2)}, Available: $${currentBalance.toFixed(2)}`;
+      addLog(++logIdRef.current, {
+        time: new Date().toLocaleTimeString(),
+        market: 'SYSTEM',
+        symbol: tradeSymbol,
+        contract: cfg.contract,
+        stake: cStake,
+        martingaleStep: mStep,
+        exitDigit: '-',
+        result: 'Failed',
+        pnl: 0,
+        balance: currentBalance,
+        switchInfo: `❌ ${errorMsg} - Trade skipped`,
+      });
+      return { 
+        localPnl: currentPnl, 
+        localBalance: currentBalance, 
+        cStake, 
+        mStep, 
+        inRecovery: mkt === 2, 
+        shouldBreak: false,
+        won: false,
+        contractExecuted: false,
+        errorMessage: errorMsg
+      };
     }
     
     const logId = ++logIdRef.current;
@@ -1809,6 +1840,7 @@ export default function ProScannerBot() {
     let updatedBalance = currentBalance;
     let updatedPnl = currentPnl;
     let won = false;
+    let contractExecuted = false;
 
     try {
       if (!turboMode) {
@@ -1825,16 +1857,24 @@ export default function ProScannerBot() {
       };
       if (needsBarrier(cfg.contract)) buyParams.barrier = cfg.barrier;
 
-      const { contractId } = await derivApi.buyContract(buyParams);
+      // Attempt to buy contract
+      const buyResponse = await derivApi.buyContract(buyParams);
+      
+      // Check if contract was successfully purchased
+      if (!buyResponse || !buyResponse.contractId) {
+        throw new Error('Contract purchase failed - no contract ID returned');
+      }
+      
+      contractExecuted = true;
       
       if (copyTradingService.enabled) {
         copyTradingService.copyTrade({
           ...buyParams,
-          masterTradeId: contractId,
+          masterTradeId: buyResponse.contractId,
         }).catch(err => console.error('Copy trading error:', err));
       }
       
-      const result = await derivApi.waitForContractResult(contractId);
+      const result = await derivApi.waitForContractResult(buyResponse.contractId);
       won = result.status === 'won';
       const pnl = result.profit;
       
@@ -1924,11 +1964,30 @@ export default function ProScannerBot() {
         mStep: newMStep, 
         inRecovery: newInRecovery, 
         shouldBreak,
-        won
+        won,
+        contractExecuted: true
       };
     } catch (err: any) {
       console.error('Trade execution error:', err);
-      updateLog(logId, { result: 'Loss', pnl: 0, exitDigit: '-', switchInfo: `Error: ${err.message}` });
+      
+      // Only update the log if contract was NOT executed (no money deducted)
+      if (!contractExecuted) {
+        // No contract was placed, so no money was deducted - mark as Failed without affecting balance
+        updateLog(logId, { 
+          result: 'Failed', 
+          pnl: 0, 
+          exitDigit: '-', 
+          switchInfo: `❌ Contract failed: ${err.message || 'Unknown error'} - No money deducted` 
+        });
+      } else {
+        // Contract was placed but we couldn't get result - this is a real issue
+        updateLog(logId, { 
+          result: 'Failed', 
+          pnl: 0, 
+          exitDigit: '-', 
+          switchInfo: `⚠️ Contract placed but result unknown: ${err.message}` 
+        });
+      }
       
       if (err.message?.includes('connection') || !derivApi.isConnected) {
         saveBotState();
@@ -1939,6 +1998,7 @@ export default function ProScannerBot() {
       }
       
       if (!turboMode) await new Promise(r => setTimeout(r, 2000));
+      
       return { 
         localPnl: updatedPnl, 
         localBalance: updatedBalance, 
@@ -1946,12 +2006,14 @@ export default function ProScannerBot() {
         mStep, 
         inRecovery, 
         shouldBreak: false,
-        won: false
+        won: false,
+        contractExecuted: false,
+        errorMessage: err.message
       };
     }
   }, [addLog, updateLog, m2Enabled, martingaleOn, martingaleMultiplier, martingaleMaxSteps, takeProfit, stopLoss, turboMode, ensureConnection, saveBotState, restoreBotState, activeAccount, recordLoss, updateBalanceImmediately, balanceCache]);
 
-  // Modified startBot with state restoration
+  // Modified startBot with state restoration and proper error handling
   const startBot = useCallback(async () => {
     if (!isAuthorized || isRunning) return;
     
@@ -1978,6 +2040,19 @@ export default function ProScannerBot() {
     } else {
       const connected = await ensureConnection();
       if (!connected) {
+        addLog(++logIdRef.current, {
+          time: new Date().toLocaleTimeString(),
+          market: 'SYSTEM',
+          symbol: 'ERROR',
+          contract: 'CONNECTION',
+          stake: 0,
+          martingaleStep: 0,
+          exitDigit: '-',
+          result: 'Failed',
+          pnl: 0,
+          balance: authBalance,
+          switchInfo: '❌ Failed to connect to Deriv. Please check your connection.',
+        });
         return;
       }
       currentBalanceLocal = await balanceCache.getBalance(async () => {
@@ -1987,16 +2062,86 @@ export default function ProScannerBot() {
     }
     
     if (baseStakeLocal < 0.35) { 
+      addLog(++logIdRef.current, {
+        time: new Date().toLocaleTimeString(),
+        market: 'SYSTEM',
+        symbol: 'ERROR',
+        contract: 'STAKE',
+        stake: 0,
+        martingaleStep: 0,
+        exitDigit: '-',
+        result: 'Failed',
+        pnl: 0,
+        balance: currentBalanceLocal,
+        switchInfo: '❌ Minimum stake is $0.35. Please increase stake amount.',
+      });
       return; 
     }
     if (!m1Enabled && !m2Enabled) { 
+      addLog(++logIdRef.current, {
+        time: new Date().toLocaleTimeString(),
+        market: 'SYSTEM',
+        symbol: 'ERROR',
+        contract: 'CONFIG',
+        stake: 0,
+        martingaleStep: 0,
+        exitDigit: '-',
+        result: 'Failed',
+        pnl: 0,
+        balance: currentBalanceLocal,
+        switchInfo: '❌ Both M1 and M2 are disabled. Enable at least one market.',
+      });
       return; 
     }
     if (strategyM1Enabled && m1StrategyMode === 'pattern' && !m1PatternValid) { 
+      addLog(++logIdRef.current, {
+        time: new Date().toLocaleTimeString(),
+        market: 'SYSTEM',
+        symbol: 'ERROR',
+        contract: 'STRATEGY',
+        stake: 0,
+        martingaleStep: 0,
+        exitDigit: '-',
+        result: 'Failed',
+        pnl: 0,
+        balance: currentBalanceLocal,
+        switchInfo: '❌ M1 pattern is invalid. Please enter a valid pattern (E/O only, min 2 chars).',
+      });
       return; 
     }
     if (strategyEnabled && m2StrategyMode === 'pattern' && !m2PatternValid) { 
+      addLog(++logIdRef.current, {
+        time: new Date().toLocaleTimeString(),
+        market: 'SYSTEM',
+        symbol: 'ERROR',
+        contract: 'STRATEGY',
+        stake: 0,
+        martingaleStep: 0,
+        exitDigit: '-',
+        result: 'Failed',
+        pnl: 0,
+        balance: currentBalanceLocal,
+        switchInfo: '❌ M2 pattern is invalid. Please enter a valid pattern (E/O only, min 2 chars).',
+      });
       return; 
+    }
+
+    // Check if balance is sufficient for initial stake
+    if (currentBalanceLocal < baseStakeLocal) {
+      addLog(++logIdRef.current, {
+        time: new Date().toLocaleTimeString(),
+        market: 'SYSTEM',
+        symbol: 'ERROR',
+        contract: 'BALANCE',
+        stake: 0,
+        martingaleStep: 0,
+        exitDigit: '-',
+        result: 'Failed',
+        pnl: 0,
+        balance: currentBalanceLocal,
+        switchInfo: `❌ Insufficient balance! Required: $${baseStakeLocal.toFixed(2)}, Available: $${currentBalanceLocal.toFixed(2)}`,
+      });
+      return;
     }
 
     shouldStopRef.current = false;
@@ -2219,11 +2364,14 @@ export default function ProScannerBot() {
           );
           if (!result || !runningRef.current) break;
           
-          currentPnl = result.localPnl;
-          currentBalance = result.localBalance;
-          cStake = result.cStake;
-          mStep = result.mStep;
-          inRecovery = result.inRecovery;
+          // Only update state if contract was actually executed
+          if (result.contractExecuted) {
+            currentPnl = result.localPnl;
+            currentBalance = result.localBalance;
+            cStake = result.cStake;
+            mStep = result.mStep;
+            inRecovery = result.inRecovery;
+          }
 
           if (result.shouldBreak) {
             shouldStopRef.current = true;
@@ -2267,11 +2415,14 @@ export default function ProScannerBot() {
       );
       if (!result || !runningRef.current) break;
       
-      currentPnl = result.localPnl;
-      currentBalance = result.localBalance;
-      cStake = result.cStake;
-      mStep = result.mStep;
-      inRecovery = result.inRecovery;
+      // Only update state if contract was actually executed
+      if (result.contractExecuted) {
+        currentPnl = result.localPnl;
+        currentBalance = result.localBalance;
+        cStake = result.cStake;
+        mStep = result.mStep;
+        inRecovery = result.inRecovery;
+      }
 
       if (result.shouldBreak) {
         shouldStopRef.current = true;
@@ -3066,21 +3217,24 @@ export default function ProScannerBot() {
                         <td className="p-2 text-center font-mono text-[10px] font-bold">{e.exitDigit}</td>
                         <td className="p-2 text-center">
                           <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold ${
-                            e.result === 'Win' || e.result === 'V-Win' ? 'bg-profit/20 text-profit border border-profit/30' :
-                            e.result === 'Loss' || e.result === 'V-Loss' ? 'bg-loss/20 text-loss border border-loss/30' :
+                            e.result === 'Win' ? 'bg-profit/20 text-profit border border-profit/30' :
+                            e.result === 'Loss' ? 'bg-loss/20 text-loss border border-loss/30' :
+                            e.result === 'V-Win' ? 'bg-profit/20 text-profit border border-profit/30' :
+                            e.result === 'V-Loss' ? 'bg-loss/20 text-loss border border-loss/30' :
+                            e.result === 'Failed' ? 'bg-orange-500/20 text-orange-500 border border-orange-500/30' :
                             'bg-warning/20 text-warning animate-pulse border border-warning/30'
                           }`}>
-                            {e.result === 'Pending' ? '...' : e.result === 'V-Win' ? '✓' : e.result === 'V-Loss' ? '✗' : e.result}
+                            {e.result === 'Pending' ? '...' : e.result === 'V-Win' ? '✓' : e.result === 'V-Loss' ? '✗' : e.result === 'Failed' ? '⚠️' : e.result}
                           </span>
                         </td>
                         <td className={`p-2 font-mono text-right text-[9px] font-bold ${
                           e.pnl > 0 ? 'text-profit' : e.pnl < 0 ? 'text-loss' : 'text-muted-foreground'
                         }`}>
-                          {e.result === 'Pending' ? '...' : e.market === 'VH' || e.market === 'SYSTEM' ? '-' : `${e.pnl > 0 ? '+' : ''}${e.pnl.toFixed(2)}`}
-                        </td>
+                          {e.result === 'Pending' ? '...' : e.market === 'VH' || e.market === 'SYSTEM' || e.result === 'Failed' ? '-' : `${e.pnl > 0 ? '+' : ''}${e.pnl.toFixed(2)}`}
+                         </td>
                         <td className="p-2 font-mono text-right text-[9px] text-muted-foreground">
-                          {e.market === 'VH' || e.market === 'SYSTEM' ? '-' : `$${e.balance.toFixed(2)}`}
-                        </td>
+                          {e.market === 'VH' || e.market === 'SYSTEM' || e.result === 'Failed' ? '-' : `$${e.balance.toFixed(2)}`}
+                         </td>
                       </tr>
                     ))}
                   </tbody>
@@ -3095,4 +3249,4 @@ export default function ProScannerBot() {
       <TPSLNotificationPopup />
     </>
   );
-        }
+    }
