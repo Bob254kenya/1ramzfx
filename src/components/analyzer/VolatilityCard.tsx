@@ -177,6 +177,12 @@ export default function VolatilityCard({
       if (d >= 0 && d <= 9) counts[d]++;
     }
 
+    // Calculate percentages for each digit (to one decimal place)
+    const digitPercentages = new Array(10).fill('0.0');
+    for (let i = 0; i < 10; i++) {
+      digitPercentages[i] = ((counts[i] / total) * 100).toFixed(1);
+    }
+
     // Find most, second, least frequent digits
     let most = 0, second = 1, least = 9;
     let mostCount = counts[0], secondCount = counts[1], leastCount = counts[9];
@@ -296,10 +302,14 @@ export default function VolatilityCard({
     return {
       lastDigits,
       counts,
+      digitPercentages,
       total,
       most,
       second,
       least,
+      mostCount,
+      secondCount,
+      leastCount,
       lowPercent,
       highPercent,
       signalType,
@@ -426,11 +436,11 @@ export default function VolatilityCard({
         </div>
       </div>
 
-      {/* Digit buttons */}
+      {/* Digit buttons with 1 decimal place percentages */}
       <div className="mb-2 sm:mb-2.5">
         <div className="grid grid-cols-5 gap-0.5 sm:gap-1">
           {Array.from({ length: 10 }, (_, i) => {
-            const pct = analysis.total > 0 ? ((analysis.counts[i] / analysis.total) * 100).toFixed(0) : '0';
+            const pct = analysis.digitPercentages[i];
             let btnClass = 'bg-muted/50 hover:bg-muted text-foreground';
             if (i === analysis.most) btnClass = 'bg-gradient-to-r from-green-500 to-emerald-500 text-white';
             else if (i === analysis.second) btnClass = 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white';
@@ -458,8 +468,8 @@ export default function VolatilityCard({
       <div className="grid grid-cols-2 gap-1 sm:gap-1.5 mb-2 sm:mb-2.5">
         <div className="bg-muted/30 rounded p-1 sm:p-1.5">
           <div className="flex justify-between text-[7px] sm:text-[8px] font-mono">
-            <span className="text-red-500">{activeDigit}</span>
-            <span className="text-green-500">{activeDigit}</span>
+            <span className="text-red-500">&lt;{activeDigit}</span>
+            <span className="text-green-500">&gt;{activeDigit}</span>
           </div>
           <div className="flex gap-0.5 sm:gap-1 mt-0.5">
             <div className="flex-1 h-1 sm:h-1.5 bg-red-500/20 rounded-full overflow-hidden">
@@ -511,23 +521,57 @@ export default function VolatilityCard({
         </div>
       </div>
 
-      {/* Best Entries */}
-      {analysis.bestEntryDigits.length > 0 && (
-        <div className="mb-2 sm:mb-2.5 bg-gradient-to-r from-primary/5 to-primary/10 rounded p-1 sm:p-1.5">
-          <div className="flex items-center gap-0.5 sm:gap-1">
-            <Zap className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-primary" />
-            <span className="text-[6px] sm:text-[7px] font-bold text-primary">BEST</span>
+      {/* Most, Second Most, and Least Appearing Digits Container */}
+      <div className="mb-2 sm:mb-2.5 bg-gradient-to-r from-primary/5 to-primary/10 rounded p-1.5 sm:p-2">
+        <div className="flex items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2">
+          <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
+          <span className="text-[7px] sm:text-[8px] font-bold text-primary uppercase tracking-wide">Digit Frequency</span>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+          {/* Most Appearing */}
+          <div className="text-center bg-green-500/10 rounded-lg p-1 sm:p-1.5">
+            <div className="text-[6px] sm:text-[7px] text-green-500/80 font-medium mb-0.5">MOST</div>
+            <div className="text-[16px] sm:text-[20px] font-mono font-bold text-green-500 leading-none">
+              {analysis.most}
+            </div>
+            <div className="text-[7px] sm:text-[8px] text-green-400 font-mono mt-0.5">
+              {analysis.digitPercentages[analysis.most]}%
+            </div>
+            <div className="text-[5px] sm:text-[6px] text-green-500/60 mt-0.5">
+              {analysis.mostCount} ticks
+            </div>
           </div>
-          <div className="flex justify-around mt-0.5 sm:mt-1">
-            {analysis.bestEntryDigits.map((entry, idx) => (
-              <div key={idx} className="text-center">
-                <div className="text-[10px] sm:text-[11px] font-mono font-bold text-foreground">{entry.digit}</div>
-                <div className="text-[5px] sm:text-[6px] text-green-500">{entry.winRate.toFixed(0)}%</div>
-              </div>
-            ))}
+
+          {/* Second Most Appearing */}
+          <div className="text-center bg-blue-500/10 rounded-lg p-1 sm:p-1.5">
+            <div className="text-[6px] sm:text-[7px] text-blue-500/80 font-medium mb-0.5">2ND MOST</div>
+            <div className="text-[16px] sm:text-[20px] font-mono font-bold text-blue-500 leading-none">
+              {analysis.second}
+            </div>
+            <div className="text-[7px] sm:text-[8px] text-blue-400 font-mono mt-0.5">
+              {analysis.digitPercentages[analysis.second]}%
+            </div>
+            <div className="text-[5px] sm:text-[6px] text-blue-500/60 mt-0.5">
+              {analysis.secondCount} ticks
+            </div>
+          </div>
+
+          {/* Least Appearing */}
+          <div className="text-center bg-red-500/10 rounded-lg p-1 sm:p-1.5">
+            <div className="text-[6px] sm:text-[7px] text-red-500/80 font-medium mb-0.5">LEAST</div>
+            <div className="text-[16px] sm:text-[20px] font-mono font-bold text-red-500 leading-none">
+              {analysis.least}
+            </div>
+            <div className="text-[7px] sm:text-[8px] text-red-400 font-mono mt-0.5">
+              {analysis.digitPercentages[analysis.least]}%
+            </div>
+            <div className="text-[5px] sm:text-[6px] text-red-500/60 mt-0.5">
+              {analysis.leastCount} ticks
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Patterns */}
       {analysis.longestPatterns.length > 0 && analysis.longestPatterns[0]?.digits.length >= 3 && (
@@ -577,4 +621,4 @@ export default function VolatilityCard({
       )}
     </motion.div>
   );
-}
+        }
