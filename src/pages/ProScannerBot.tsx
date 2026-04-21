@@ -173,7 +173,7 @@ const SocialNotificationPopup = ({ onClose }: { onClose: () => void }) => {
     },
     {
       name: 'YouTube',
-      url: 'www.youtube.com/@ceoramz',
+      url: 'https://www.youtube.com/@ceoramz',
       icon: <Youtube className="w-4 h-4" />,
       color: 'hover:text-[#FF0000]',
       bgGradient: 'from-red-500/20 to-red-600/20',
@@ -452,7 +452,6 @@ const TPSLNotificationPopup = () => {
 
 // ============================================
 // DRAGGABLE TRADING CHART POPUP COMPONENT - CENTERED WITH TOP PADDING
-// RESIZED TO MATCH SOCIAL NOTIFICATION POPUP (380px width)
 // ============================================
 
 const ALL_MARKETS = [
@@ -489,7 +488,7 @@ const CONTRACT_TYPES_CHART = [
   { value: 'DIGITUNDER', label: 'Digits Under' },
 ];
 
-// Global tick storage for chart - now with 1000 tick history
+// Global tick storage for chart
 const chartTickHistory: { [symbol: string]: number[] } = {};
 const chartTickPrices: { [symbol: string]: number[] } = {};
 const chartTickCallbacks: { [symbol: string]: (() => void)[] } = [];
@@ -509,7 +508,6 @@ function addChartTick(symbol: string, digit: number, price: number) {
   chartTickHistory[symbol].push(digit);
   chartTickPrices[symbol].push(price);
   
-  // Keep last 1000 ticks (increased from 500 to 1000)
   if (chartTickHistory[symbol].length > 2000) chartTickHistory[symbol].shift();
   if (chartTickPrices[symbol].length > 2000) chartTickPrices[symbol].shift();
   
@@ -529,7 +527,6 @@ function subscribeToChartTicks(symbol: string, callback: () => void) {
 function calculateChartDigitStats(symbol: string, tickRange: number) {
   const ticks = getChartTickHistory(symbol);
   const tickPricesData = getChartTickPrices(symbol);
-  // Use the selected tickRange (default 1000) or all available if less
   const recentTicks = ticks.slice(-tickRange);
   
   const frequency: Record<number, number> = {};
@@ -594,7 +591,7 @@ function calculateChartDigitStats(symbol: string, tickRange: number) {
   };
 }
 
-// Draggable Trading Chart Popup Component - Centered with 100px top padding
+// Draggable Trading Chart Popup Component
 const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunning: boolean }) => {
   const [symbol, setSymbol] = useState('R_100');
   const [selectedContractType, setSelectedContractType] = useState('CALL');
@@ -615,7 +612,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
   const subscribedRef = useRef(false);
   const subscriptionRef = useRef<any>(null);
   
-  // Drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     if (dragHandleRef.current && dragHandleRef.current.contains(e.target as Node)) {
       setIsDragging(true);
@@ -747,7 +743,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
       await cleanup();
       
       try {
-        // Fetch 1000 ticks history (increased from 500 to 1000)
         const hist = await derivApi.getTickHistory(symbol as MarketSymbol, 1000);
         if (!active) return;
         
@@ -862,11 +857,9 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
           bg-gradient-to-br from-slate-900 to-slate-950 border border-blue-500/30
           ${isExiting ? 'animate-slide-out-up' : 'animate-slide-in-down'}
           ${isDragging ? 'cursor-grabbing' : ''}
-          lg:max-h-[90vh]
         `}
         style={{ height: 'auto', maxHeight: 'calc(100vh - 120px)' }}
       >
-        {/* Draggable Header */}
         <div 
           ref={dragHandleRef}
           onMouseDown={handleMouseDown}
@@ -908,7 +901,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
         </div>
         
         <div className="p-3 space-y-3">
-          {/* Market Selector */}
           <div>
             <label className="text-[9px] text-blue-300 block mb-1">Market</label>
             <Select value={symbol} onValueChange={setSymbol}>
@@ -925,7 +917,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
             </Select>
           </div>
           
-          {/* Contract Type */}
           <div>
             <label className="text-[9px] text-blue-300 block mb-1">Contract Type</label>
             <Select value={selectedContractType} onValueChange={setSelectedContractType}>
@@ -942,7 +933,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
             </Select>
           </div>
           
-          {/* Prediction Digit */}
           {['DIGITMATCH', 'DIGITDIFF', 'DIGITOVER', 'DIGITUNDER'].includes(selectedContractType) && (
             <div>
               <label className="text-[9px] text-blue-300 block mb-1">Prediction (0-9)</label>
@@ -964,7 +954,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
             </div>
           )}
           
-          {/* Tick Range - Default 1000 ticks */}
           <div className="flex items-center justify-between">
             <label className="text-[9px] text-blue-300">Tick Range</label>
             <Select value={String(tickRange)} onValueChange={v => setTickRange(parseInt(v))}>
@@ -979,7 +968,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
             </Select>
           </div>
           
-          {/* Live Stats Badge */}
           <div className="flex items-center justify-between bg-slate-800/30 rounded-lg p-1.5 border border-blue-500/20">
             <div className="flex items-center gap-1">
               <span className="relative flex h-1.5 w-1.5">
@@ -993,7 +981,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
             </Badge>
           </div>
           
-          {/* Enhanced Analysis Grid */}
           <div className="grid grid-cols-2 gap-1.5">
             <div className="bg-slate-800/30 rounded-lg p-1.5 text-center border border-blue-500/20">
               <div className="text-[7px] text-blue-300">Odd</div>
@@ -1039,7 +1026,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
             </div>
           </div>
           
-          {/* Digits Grid */}
           <div className="grid grid-cols-5 gap-1">
             {Array.from({ length: 10 }, (_, d) => {
               const pct = percentages[d] || 0;
@@ -1067,7 +1053,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
             })}
           </div>
           
-          {/* Digit Analysis Summary */}
           <div className="grid grid-cols-3 gap-1.5">
             <div className="bg-slate-800/30 rounded-lg p-1.5 text-center border border-green-500/20">
               <div className="text-[7px] text-green-400">🔥 Most Appearing</div>
@@ -1086,7 +1071,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
             </div>
           </div>
           
-          {/* Even/Odd Recommendation */}
           <div className="bg-slate-800/30 rounded-lg p-1.5 text-center border border-blue-500/20">
             <div className="text-[7px] text-blue-300">Even/Odd Recommendation</div>
             <div className={`font-mono text-[11px] font-bold ${evenPercentage > 50 ? 'text-green-400' : 'text-yellow-400'}`}>
@@ -1095,7 +1079,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
             <div className="text-[6px] text-gray-500">Confidence: {Math.max(evenPercentage, oddPercentage).toFixed(1)}%</div>
           </div>
           
-          {/* Legend */}
           <div className="flex flex-wrap gap-2 text-[7px] justify-center border-t border-slate-800 pt-2">
             {legend.symbol1 && (
               <div className="flex items-center gap-1">
@@ -1139,7 +1122,6 @@ const TradingChartPopup = ({ onClose, isRunning }: { onClose: () => void; isRunn
             )}
           </div>
           
-          {/* Last 26 Digits */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <h4 className="text-[9px] font-semibold text-blue-300">Filtration Chamber</h4>
@@ -1250,7 +1232,6 @@ interface LogEntry {
   switchInfo: string;
 }
 
-// Bot state for recovery after reconnection
 interface BotState {
   cStake: number;
   mStep: number;
@@ -1334,7 +1315,6 @@ function simulateVirtualContract(
   });
 }
 
-// Optimized balance cache with instant updates
 class BalanceCache {
   private static instance: BalanceCache;
   private cache: number | null = null;
@@ -1404,7 +1384,6 @@ export default function ProScannerBot() {
   const [localBalance, setLocalBalance] = useState(authBalance);
   const patternTradeTakenRef = useRef(false);
   
-  // Reconnection state
   const [isReconnecting, setIsReconnecting] = useState(false);
   const savedBotStateRef = useRef<BotState | null>(null);
   
@@ -1516,7 +1495,28 @@ export default function ProScannerBot() {
     }
   }, [refreshBalance, activeAccount?.balance, localBalance, balanceCache]);
 
-  // Auto-connect without status indicators
+  const addLog = useCallback((id: number, entry: Omit<LogEntry, 'id'>) => {
+    setLogEntries(prev => [{ ...entry, id }, ...prev].slice(0, 100));
+  }, []);
+
+  const updateLog = useCallback((id: number, updates: Partial<LogEntry>) => {
+    setLogEntries(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+  }, []);
+
+  const clearLog = useCallback(() => {
+    setLogEntries([]);
+    setWins(0); setLosses(0); setTotalStaked(0); setNetProfit(0);
+    setMartingaleStepState(0);
+    setVhFakeWins(0); setVhFakeLosses(0); setVhConsecLosses(0); setVhStatus('idle');
+    setTicksCaptured(0); setTicksMissed(0);
+    tpNotifiedRef.current = false;
+    slNotifiedRef.current = false;
+    lastPnlRef.current = 0;
+    patternTradeTakenRef.current = false;
+    shouldStopRef.current = false;
+    savedBotStateRef.current = null;
+  }, []);
+
   const ensureConnection = useCallback(async (): Promise<boolean> => {
     if (derivApi.isConnected) {
       setIsConnected(true);
@@ -1530,7 +1530,6 @@ export default function ProScannerBot() {
         await new Promise(r => setTimeout(r, 2000));
         
         if (derivApi.isConnected) {
-          // Resubscribe to all markets
           for (const market of SCANNER_MARKETS) {
             await derivApi.subscribeTicks(market.symbol as MarketSymbol, () => {}).catch(console.error);
           }
@@ -1549,7 +1548,6 @@ export default function ProScannerBot() {
     return false;
   }, []);
 
-  // Save current bot state before disconnection
   const saveBotState = useCallback(() => {
     if (isRunning && runningRef.current) {
       savedBotStateRef.current = {
@@ -1568,7 +1566,6 @@ export default function ProScannerBot() {
     }
   }, [isRunning, currentStake, martingaleStep, currentMarket, netProfit, localBalance, vhFakeWins, vhFakeLosses, vhConsecLosses, vhStatus]);
 
-  // Restore bot state after reconnection
   const restoreBotState = useCallback(() => {
     if (savedBotStateRef.current && isRunning && runningRef.current) {
       setCurrentStakeState(savedBotStateRef.current.cStake);
@@ -1582,7 +1579,6 @@ export default function ProScannerBot() {
       setVhStatus(savedBotStateRef.current.vhStatus);
       patternTradeTakenRef.current = savedBotStateRef.current.patternTradeTaken;
       
-      // Add log entry for reconnection
       const logId = ++logIdRef.current;
       addLog(logId, {
         time: new Date().toLocaleTimeString(),
@@ -1604,7 +1600,43 @@ export default function ProScannerBot() {
     return false;
   }, [isRunning, addLog]);
 
-  // Enhanced connection checker without UI indicators
+  // Tick subscription
+  useEffect(() => {
+    if (!derivApi.isConnected) return;
+    let active = true;
+    const handler = (data: any) => {
+      if (!data.tick || !active) return;
+      const sym = data.tick.symbol as string;
+      const digit = getLastDigit(data.tick.quote);
+      const now = performance.now();
+
+      const map = tickMapRef.current;
+      const arr = map.get(sym) || [];
+      arr.push(digit);
+      if (arr.length > 200) arr.shift();
+      map.set(sym, arr);
+      setTickCounts(prev => ({ ...prev, [sym]: arr.length }));
+
+      if (!turboBuffersRef.current.has(sym)) {
+        turboBuffersRef.current.set(sym, new CircularTickBuffer(1000));
+      }
+      const buf = turboBuffersRef.current.get(sym)!;
+      buf.push(digit);
+
+      if (lastTickTsRef.current > 0) {
+        const lat = now - lastTickTsRef.current;
+        setTurboLatency(Math.round(lat));
+        if (lat > 50) setTicksMissed(prev => prev + 1);
+      }
+      lastTickTsRef.current = now;
+      setTicksCaptured(prev => prev + 1);
+    };
+    const unsub = derivApi.onMessage(handler);
+    SCANNER_MARKETS.forEach(m => { derivApi.subscribeTicks(m.symbol as MarketSymbol, () => {}).catch(() => {}); });
+    return () => { active = false; unsub(); };
+  }, []);
+
+  // Connection checker
   useEffect(() => {
     const connectionChecker = setInterval(async () => {
       const connected = derivApi.isConnected;
@@ -1645,64 +1677,6 @@ export default function ProScannerBot() {
     
     return () => clearInterval(connectionChecker);
   }, [isRunning, ensureConnection, saveBotState, restoreBotState, isConnected, localBalance, addLog]);
-
-  const addLog = useCallback((id: number, entry: Omit<LogEntry, 'id'>) => {
-    setLogEntries(prev => [{ ...entry, id }, ...prev].slice(0, 100));
-  }, []);
-
-  const updateLog = useCallback((id: number, updates: Partial<LogEntry>) => {
-    setLogEntries(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
-  }, []);
-
-  const clearLog = useCallback(() => {
-    setLogEntries([]);
-    setWins(0); setLosses(0); setTotalStaked(0); setNetProfit(0);
-    setMartingaleStepState(0);
-    setVhFakeWins(0); setVhFakeLosses(0); setVhConsecLosses(0); setVhStatus('idle');
-    setTicksCaptured(0); setTicksMissed(0);
-    tpNotifiedRef.current = false;
-    slNotifiedRef.current = false;
-    lastPnlRef.current = 0;
-    patternTradeTakenRef.current = false;
-    shouldStopRef.current = false;
-    savedBotStateRef.current = null;
-  }, []);
-
-  // Tick subscription
-  useEffect(() => {
-    if (!derivApi.isConnected) return;
-    let active = true;
-    const handler = (data: any) => {
-      if (!data.tick || !active) return;
-      const sym = data.tick.symbol as string;
-      const digit = getLastDigit(data.tick.quote);
-      const now = performance.now();
-
-      const map = tickMapRef.current;
-      const arr = map.get(sym) || [];
-      arr.push(digit);
-      if (arr.length > 200) arr.shift();
-      map.set(sym, arr);
-      setTickCounts(prev => ({ ...prev, [sym]: arr.length }));
-
-      if (!turboBuffersRef.current.has(sym)) {
-        turboBuffersRef.current.set(sym, new CircularTickBuffer(1000));
-      }
-      const buf = turboBuffersRef.current.get(sym)!;
-      buf.push(digit);
-
-      if (lastTickTsRef.current > 0) {
-        const lat = now - lastTickTsRef.current;
-        setTurboLatency(Math.round(lat));
-        if (lat > 50) setTicksMissed(prev => prev + 1);
-      }
-      lastTickTsRef.current = now;
-      setTicksCaptured(prev => prev + 1);
-    };
-    const unsub = derivApi.onMessage(handler);
-    SCANNER_MARKETS.forEach(m => { derivApi.subscribeTicks(m.symbol as MarketSymbol, () => {}).catch(() => {}); });
-    return () => { active = false; unsub(); };
-  }, []);
 
   const cleanM1Pattern = m1Pattern.toUpperCase().replace(/[^EO]/g, '');
   const m1PatternValid = cleanM1Pattern.length >= 2;
@@ -1758,7 +1732,6 @@ export default function ProScannerBot() {
     return null;
   }, [checkStrategyForMarket]);
 
-  // FIXED: executeRealTrade with proper error handling - NO CONTRACT = NO LOG ENTRY
   const executeRealTrade = useCallback(async (
     cfg: { contract: string; barrier: string; symbol: string },
     tradeSymbol: string,
@@ -1779,7 +1752,6 @@ export default function ProScannerBot() {
     contractExecuted: boolean;
     errorMessage?: string;
   }> => {
-    // Ensure connection before trading
     if (!derivApi.isConnected) {
       const connected = await ensureConnection();
       if (!connected) {
@@ -1787,7 +1759,6 @@ export default function ProScannerBot() {
       }
     }
     
-    // Check if we have sufficient balance
     if (currentBalance < cStake) {
       const errorMsg = `Insufficient balance! Required: $${cStake.toFixed(2)}, Available: $${currentBalance.toFixed(2)}`;
       addLog(++logIdRef.current, {
@@ -1857,10 +1828,8 @@ export default function ProScannerBot() {
       };
       if (needsBarrier(cfg.contract)) buyParams.barrier = cfg.barrier;
 
-      // Attempt to buy contract
       const buyResponse = await derivApi.buyContract(buyParams);
       
-      // Check if contract was successfully purchased
       if (!buyResponse || !buyResponse.contractId) {
         throw new Error('Contract purchase failed - no contract ID returned');
       }
@@ -1970,9 +1939,7 @@ export default function ProScannerBot() {
     } catch (err: any) {
       console.error('Trade execution error:', err);
       
-      // Only update the log if contract was NOT executed (no money deducted)
       if (!contractExecuted) {
-        // No contract was placed, so no money was deducted - mark as Failed without affecting balance
         updateLog(logId, { 
           result: 'Failed', 
           pnl: 0, 
@@ -1980,7 +1947,6 @@ export default function ProScannerBot() {
           switchInfo: `❌ Contract failed: ${err.message || 'Unknown error'} - No money deducted` 
         });
       } else {
-        // Contract was placed but we couldn't get result - this is a real issue
         updateLog(logId, { 
           result: 'Failed', 
           pnl: 0, 
@@ -2013,7 +1979,6 @@ export default function ProScannerBot() {
     }
   }, [addLog, updateLog, m2Enabled, martingaleOn, martingaleMultiplier, martingaleMaxSteps, takeProfit, stopLoss, turboMode, ensureConnection, saveBotState, restoreBotState, activeAccount, recordLoss, updateBalanceImmediately, balanceCache]);
 
-  // Modified startBot with state restoration and proper error handling
   const startBot = useCallback(async () => {
     if (!isAuthorized || isRunning) return;
     
@@ -2126,7 +2091,6 @@ export default function ProScannerBot() {
       return; 
     }
 
-    // Check if balance is sufficient for initial stake
     if (currentBalanceLocal < baseStakeLocal) {
       addLog(++logIdRef.current, {
         time: new Date().toLocaleTimeString(),
@@ -2364,7 +2328,6 @@ export default function ProScannerBot() {
           );
           if (!result || !runningRef.current) break;
           
-          // Only update state if contract was actually executed
           if (result.contractExecuted) {
             currentPnl = result.localPnl;
             currentBalance = result.localBalance;
@@ -2415,7 +2378,6 @@ export default function ProScannerBot() {
       );
       if (!result || !runningRef.current) break;
       
-      // Only update state if contract was actually executed
       if (result.contractExecuted) {
         currentPnl = result.localPnl;
         currentBalance = result.localBalance;
@@ -2581,10 +2543,10 @@ export default function ProScannerBot() {
         </button>
       </div>
 
-      {/* Social Notification Popup - Centered with 100px top padding */}
+      {/* Social Notification Popup */}
       {showSocialPopup && <SocialNotificationPopup onClose={handleCloseSocialPopup} />}
 
-      {/* Trading Chart Popup - Centered with 100px top padding */}
+      {/* Trading Chart Popup */}
       {showTradingChart && (
         <TradingChartPopup onClose={handleCloseTradingChart} isRunning={isRunning} />
       )}
@@ -3049,7 +3011,7 @@ export default function ProScannerBot() {
               )}
             </div>
 
-            {/* DUPLICATE LIVE STATUS - Added below start button and above Activity Log */}
+            {/* DUPLICATE LIVE STATUS */}
             <div className="bg-card border border-blue-500/20 rounded-xl p-3 shadow-md">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-xs font-semibold flex items-center gap-2">
@@ -3142,7 +3104,7 @@ export default function ProScannerBot() {
               )}
             </div>
 
-            {/* Activity Log - Full Width, Full Height */}
+            {/* Activity Log */}
             <div className="bg-card border border-blue-500/20 rounded-xl overflow-hidden shadow-lg flex flex-col">
               <div className="px-4 py-3 border-b border-blue-500/20 flex items-center justify-between gap-3 bg-muted/20">
                 <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
@@ -3231,10 +3193,10 @@ export default function ProScannerBot() {
                           e.pnl > 0 ? 'text-profit' : e.pnl < 0 ? 'text-loss' : 'text-muted-foreground'
                         }`}>
                           {e.result === 'Pending' ? '...' : e.market === 'VH' || e.market === 'SYSTEM' || e.result === 'Failed' ? '-' : `${e.pnl > 0 ? '+' : ''}${e.pnl.toFixed(2)}`}
-                         </td>
+                        </td>
                         <td className="p-2 font-mono text-right text-[9px] text-muted-foreground">
                           {e.market === 'VH' || e.market === 'SYSTEM' || e.result === 'Failed' ? '-' : `$${e.balance.toFixed(2)}`}
-                         </td>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -3249,4 +3211,4 @@ export default function ProScannerBot() {
       <TPSLNotificationPopup />
     </>
   );
-    }
+}
