@@ -457,7 +457,7 @@ interface LogEntry {
   stake: number;
   martingaleStep: number;
   exitDigit: string;
-  result: 'Win' | 'Loss' | 'Pending';
+  result: 'Win' | 'Loss' | 'Pending' | 'Failed';
   pnl: number;
   balance: number;
   switchInfo: string;
@@ -497,9 +497,9 @@ interface MarketStats {
 // Constants
 const MAX_SCAN_ATTEMPTS = 100;
 const SCAN_INTERVAL = 100;
-const CONNECTION_CHECK_INTERVAL = 3000; // Reduced for faster detection
-const DATA_STALENESS_THRESHOLD = 8000; // Reduced for faster detection
-const HEARTBEAT_INTERVAL = 15000; // Reduced for faster detection
+const CONNECTION_CHECK_INTERVAL = 3000;
+const DATA_STALENESS_THRESHOLD = 8000;
+const HEARTBEAT_INTERVAL = 15000;
 const RECONNECT_DELAY = 2000;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const DEBUG = true;
@@ -839,6 +839,7 @@ export default function ProScannerBot() {
   const [currentMarket, setCurrentMarket] = useState<1 | 2>(1);
   const [wins, setWins] = useState(0);
   const [losses, setLosses] = useState(0);
+  const [failedTrades, setFailedTrades] = useState(0);
   const [totalStaked, setTotalStaked] = useState(0);
   const [currentStake, setCurrentStakeState] = useState(0);
   const [martingaleStep, setMartingaleStepState] = useState(0);
@@ -1991,7 +1992,11 @@ export default function ProScannerBot() {
 
   const clearLog = useCallback(() => {
     setLogEntries([]);
-    setWins(0); setLosses(0); setTotalStaked(0); setNetProfit(0);
+    setWins(0); 
+    setLosses(0); 
+    setFailedTrades(0);
+    setTotalStaked(0); 
+    setNetProfit(0);
     setMartingaleStepState(0);
     tpNotifiedRef.current = false;
     slNotifiedRef.current = false;
@@ -2057,7 +2062,6 @@ export default function ProScannerBot() {
       }
     }
     
-    const logId = ++logIdRef.current;
     const now = new Date().toLocaleTimeString();
     setTotalStaked(prev => prev + cStake);
     setCurrentStakeState(cStake);
@@ -2066,14 +2070,6 @@ export default function ProScannerBot() {
     lastTradeTimeRef.current.set(tradeSymbol, Date.now());
     lastTradeOverallRef.current = Date.now();
 
-    addLog(logId, {
-      time: now, market: mkt === 1 ? 'M1' : 'M2', symbol: tradeSymbol,
-      contract: contractType, stake: cStake, martingaleStep: mStep,
-      exitDigit: '...', result: 'Pending', pnl: 0, balance: currentLocalBalance,
-      switchInfo: `Pattern: ${patternDigits} | Last 15: ${last15Ticks.join(',')}`,
-    });
-
-    let inRecovery = mkt === 2;
     let updatedLocalBalance = currentLocalBalance;
     let updatedNetProfit = currentNetProfit;
     let contractId: string | null = null;
@@ -2088,7 +2084,25 @@ export default function ProScannerBot() {
       if (barrier) buyParams.barrier = barrier;
 
       const buyResult = await derivApi.buyContract(buyParams);
+      
+      // Check if the buy was successful and we have a valid contractId
+      if (!buyResult || !buyResult.contractId) {
+        logDebug(`❌ Failed to buy contract - No contract ID returned for ${tradeSymbol}`);
+        setFailedTrades(prev => prev + 1);
+        // Don't add to log - no trade was actually executed
+        return { 
+          localPnl: updatedNetProfit, 
+          localBalance: updatedLocalBalance, 
+          cStake, 
+          mStep, 
+          inRecovery: mkt === 2, 
+          shouldBreak: false,
+          tradeExecuted: false
+        };
+      }
+      
       contractId = buyResult.contractId;
+      logDebug(`✅ Contract purchased successfully - ID: ${contractId}, Stake: $${cStake}`);
       
       if (copyTradingService.enabled) {
         copyTradingService.copyTrade({
@@ -2100,6 +2114,15 @@ export default function ProScannerBot() {
       const result = await derivApi.waitForContractResult(contractId);
       const won = result.status === 'won';
       const pnl = result.profit;
+      
+      // Only add to log if trade was successful
+      const logId = ++logIdRef.current;
+      addLog(logId, {
+        time: now, market: mkt === 1 ? 'M1' : 'M2', symbol: tradeSymbol,
+        contract: contractType, stake: cStake, martingaleStep: mStep,
+        exitDigit: '...', result: 'Pending', pnl: 0, balance: currentLocalBalance,
+        switchInfo: `Pattern: ${patternDigits} | Last 15: ${last15Ticks.join(',')}`,
+      });
       
       updatePatternResult(tradeSymbol, won ? 'Win' : 'Loss', pnl, cStake);
       
@@ -2120,6 +2143,7 @@ export default function ProScannerBot() {
 
       let switchInfo = `Pattern: ${patternDigits} | Exit: ${exitDigit} | Last 15: ${last15Ticks.join(',')}`;
       let shouldResetMartingale = false;
+      let inRecovery = mkt === 2;
       
       if (won) {
         if (inRecovery) {
@@ -2189,19 +2213,21 @@ export default function ProScannerBot() {
         cStake, 
         mStep, 
         inRecovery, 
-        shouldBreak 
+        shouldBreak,
+        tradeExecuted: true
       };
     } catch (err: any) {
       logDebug('Trade execution error:', err);
-      updateLog(logId, { result: 'Loss', pnl: 0, exitDigit: '-', switchInfo: `Error: ${err.message}` });
-      await new Promise(r => setTimeout(r, 2000));
+      setFailedTrades(prev => prev + 1);
+      // Don't add to log - no trade was actually executed
       return { 
         localPnl: updatedNetProfit, 
         localBalance: updatedLocalBalance, 
         cStake, 
         mStep, 
-        inRecovery, 
-        shouldBreak: false 
+        inRecovery: mkt === 2, 
+        shouldBreak: false,
+        tradeExecuted: false
       };
     }
   }, [addLog, updateLog, m2Enabled, martingaleOn, martingaleMultiplier, martingaleMaxSteps, takeProfit, stopLoss, activeAccount, recordLoss, ensureConnection, updateBalanceAndProfit, updatePatternResult]);
@@ -2253,6 +2279,7 @@ export default function ProScannerBot() {
     netProfitRef.current = 0;
     setWins(0);
     setLosses(0);
+    setFailedTrades(0);
     setTotalStaked(0);
     setLogEntries([]); // Clear old logs
 
@@ -2407,20 +2434,27 @@ export default function ProScannerBot() {
       );
       if (!result || !runningRef.current) break;
       
-      const wasLoss = result.cStake !== cStake || result.mStep !== mStep || result.inRecovery !== inRecovery;
-      if (wasLoss && !result.shouldBreak && martingaleOn && result.mStep > 0 && !result.inRecovery) {
-        waitingForPatternAfterLoss = true;
-      }
-      
-      currentNetProfit = result.localPnl;
-      currentLocalBalance = result.localBalance;
-      cStake = result.cStake;
-      mStep = result.mStep;
-      inRecovery = result.inRecovery;
+      // Only update state if trade was actually executed
+      if (result.tradeExecuted) {
+        const wasLoss = result.cStake !== cStake || result.mStep !== mStep || result.inRecovery !== inRecovery;
+        if (wasLoss && !result.shouldBreak && martingaleOn && result.mStep > 0 && !result.inRecovery) {
+          waitingForPatternAfterLoss = true;
+        }
+        
+        currentNetProfit = result.localPnl;
+        currentLocalBalance = result.localBalance;
+        cStake = result.cStake;
+        mStep = result.mStep;
+        inRecovery = result.inRecovery;
 
-      if (result.shouldBreak) {
-        logDebug('Break condition met, stopping bot');
-        break;
+        if (result.shouldBreak) {
+          logDebug('Break condition met, stopping bot');
+          break;
+        }
+      } else {
+        // Trade failed to execute - wait before retrying
+        logDebug('Trade execution failed, waiting before retry...');
+        await new Promise(r => setTimeout(r, 2000));
       }
 
       await new Promise(r => setTimeout(r, 1000));
@@ -2561,6 +2595,11 @@ export default function ProScannerBot() {
                 {isRunning && (
                   <Badge variant="outline" className={`text-[10px] ${currentMarket === 1 ? 'text-emerald-400 border-emerald-500/30' : 'text-fuchsia-400 border-fuchsia-500/30'} bg-slate-800/50`}>
                     {currentMarket === 1 ? '🏠 M1' : '🔄 M2'}
+                  </Badge>
+                )}
+                {failedTrades > 0 && (
+                  <Badge variant="outline" className="text-[10px] text-orange-400 border-orange-500/30 bg-orange-500/10">
+                    Failed: {failedTrades}
                   </Badge>
                 )}
               </div>
@@ -3241,7 +3280,7 @@ export default function ProScannerBot() {
               </span>
               <span className="font-mono text-xl font-bold text-cyan-400">${localBalance.toFixed(2)}</span>
             </div>
-            <div className="grid grid-cols-6 gap-3">
+            <div className="grid grid-cols-7 gap-3">
               <div className="text-center bg-slate-800/30 rounded-lg p-2">
                 <div className="text-[9px] text-slate-400 mb-1 font-semibold">Total Trades</div>
                 <div className="font-mono text-lg font-bold text-slate-200">{wins + losses}</div>
@@ -3257,6 +3296,10 @@ export default function ProScannerBot() {
               <div className="text-center bg-slate-800/30 rounded-lg p-2">
                 <div className="text-[9px] text-slate-400 mb-1 font-semibold">Losses😒</div>
                 <div className="font-mono text-lg font-bold text-rose-400">{losses}</div>
+              </div>
+              <div className="text-center bg-slate-800/30 rounded-lg p-2">
+                <div className="text-[9px] text-slate-400 mb-1 font-semibold">Failed❌</div>
+                <div className="font-mono text-lg font-bold text-orange-400">{failedTrades}</div>
               </div>
               <div className="text-center bg-slate-800/30 rounded-lg p-2">
                 <div className="text-[9px] text-slate-400 mb-1 font-semibold">Total Staked</div>
@@ -3362,8 +3405,11 @@ export default function ProScannerBot() {
                   {logEntries.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="text-center text-slate-500 py-12">
-                        No trades yet — configure and start the bot
-                       </td>
+                        No successful trades yet — configure and start the bot
+                        <div className="text-[9px] text-slate-600 mt-1">
+                          Failed trades: {failedTrades}
+                        </div>
+                      </td>
                     </tr>
                   ) : logEntries.map(e => (
                     <tr key={e.id} className={`border-t border-slate-700/30 hover:bg-slate-800/30 transition-colors ${
@@ -3408,4 +3454,4 @@ export default function ProScannerBot() {
       <NotificationPopup />
     </>
   );
-}
+        }
