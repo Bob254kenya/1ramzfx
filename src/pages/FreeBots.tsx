@@ -52,22 +52,202 @@ const FREE_BOT_TEMPLATES: FreeBotTemplate[] = [
     config: {"version":1,"botName":"UNDER 7 BOT","m1":{"enabled":false,"symbol":"1HZ100V","contract":"DIGITOVER","barrier":"1","hookEnabled":false,"virtualLossCount":"1","realCount":"1"},"m2":{"enabled":true,"symbol":"R_100","contract":"DIGITUNDER","barrier":"7","hookEnabled":false,"virtualLossCount":"3","realCount":"2"},"risk":{"stake":"0.5","martingaleOn":true,"martingaleMultiplier":"2.0","martingaleMaxSteps":"5","takeProfit":"10","stopLoss":"5"},"strategy":{"m1Enabled":false,"m2Enabled":true,"m1Mode":"pattern","m2Mode":"digit","m1Pattern":"","m1DigitCondition":"==","m1DigitCompare":"5","m1DigitWindow":"3","m2Pattern":"EEEEEOEO","m2DigitCondition":">=","m2DigitCompare":"8","m2DigitWindow":"3"},"scanner":{"active":true},"turbo":{"enabled":true}},
     description: 'Under 7 digit strategy on Vol 100. Enters when last 3 digits are ≥ 8. Great reversal setup.',
   },
-  // NEW 4 JSON BOTS ADDED BELOW
+  // ========== NEW 4 BOTS FROM YOUR JSON FILES ==========
   {
-    config: {"version":1,"botName":"Over 5 Best Bot 2025-2027","m1":{"enabled":false,"symbol":"1HZ75V","contract":"DIGITOVER","barrier":"3","hookEnabled":true,"virtualLossCount":"3","realCount":"2"},"m2":{"enabled":false,"symbol":"1HZ15V","contract":"DIGITOVER","barrier":"5","hookEnabled":false,"virtualLossCount":"3","realCount":"2"},"risk":{"stake":"0.94","martingaleOn":true,"martingaleMultiplier":"1.7","martingaleMaxSteps":"5","takeProfit":"2","stopLoss":"30"},"strategy":{"m1Enabled":false,"m2Enabled":true,"m1Mode":"pattern","m2Mode":"digit","m1Pattern":"","m1DigitCondition":"==","m1DigitCompare":"5","m1DigitWindow":"3","m2Pattern":"EEEEOOE","m2DigitCondition":"<=","m2DigitCompare":"5","m2DigitWindow":"5"},"scanner":{"active":true},"turbo":{"enabled":false}},
-    description: 'M2 trades Over 5 on V15 with digit strategy. Looks at last 5 digits ≤ 5. Martingale 1.7x, 2% TP, 30% SL.',
+    config: {
+      "version": 1,
+      "botName": "Over 5 Best Bot 2025-2027",
+      "m1": {
+        "enabled": false,
+        "symbol": "1HZ75V",
+        "contract": "DIGITOVER",
+        "barrier": "3",
+        "hookEnabled": true,
+        "virtualLossCount": "3",
+        "realCount": "2"
+      },
+      "m2": {
+        "enabled": false,
+        "symbol": "1HZ15V",
+        "contract": "DIGITOVER",
+        "barrier": "5",
+        "hookEnabled": false,
+        "virtualLossCount": "3",
+        "realCount": "2"
+      },
+      "risk": {
+        "stake": "0.94",
+        "martingaleOn": true,
+        "martingaleMultiplier": "1.7",
+        "martingaleMaxSteps": "5",
+        "takeProfit": "2",
+        "stopLoss": "30"
+      },
+      "strategy": {
+        "m1Enabled": false,
+        "m2Enabled": true,
+        "m1Mode": "pattern",
+        "m2Mode": "digit",
+        "m1Pattern": "",
+        "m1DigitCondition": "==",
+        "m1DigitCompare": "5",
+        "m1DigitWindow": "3",
+        "m2Pattern": "EEEEOOE",
+        "m2DigitCondition": "<=",
+        "m2DigitCompare": "5",
+        "m2DigitWindow": "5"
+      },
+      "scanner": { "active": true },
+      "turbo": { "enabled": false }
+    },
+    description: 'M2 strategy on 1HZ15V trading DIGITOVER with barrier 5. Looks at last 5 digits ≤ 5. Martingale 1.7x, 2% TP, 30% SL.',
   },
   {
-    config: {"version":1,"botName":"Over 3 Best Bot 2025-2027","m1":{"enabled":true,"symbol":"1HZ75V","contract":"DIGITOVER","barrier":"3","hookEnabled":true,"virtualLossCount":"3","realCount":"2"},"m2":{"enabled":false,"symbol":"R_50","contract":"DIGITODD","barrier":"2","hookEnabled":false,"virtualLossCount":"3","realCount":"2"},"risk":{"stake":"0.94","martingaleOn":true,"martingaleMultiplier":"2.0","martingaleMaxSteps":"5","takeProfit":"2","stopLoss":"30"},"strategy":{"m1Enabled":false,"m2Enabled":false,"m1Mode":"pattern","m2Mode":"pattern","m1Pattern":"","m1DigitCondition":"==","m1DigitCompare":"5","m1DigitWindow":"3","m2Pattern":"EEEEOOE","m2DigitCondition":"<=","m2DigitCompare":"1","m2DigitWindow":"3"},"scanner":{"active":false},"turbo":{"enabled":false}},
-    description: 'M1 trades Over 3 on V75 with Virtual Hook. Features 3 virtual losses, 2 real counts. Scanner disabled.',
+    config: {
+      "version": 1,
+      "botName": "Over 3 Best Bot 2025-2027",
+      "m1": {
+        "enabled": true,
+        "symbol": "1HZ75V",
+        "contract": "DIGITOVER",
+        "barrier": "3",
+        "hookEnabled": true,
+        "virtualLossCount": "3",
+        "realCount": "2"
+      },
+      "m2": {
+        "enabled": false,
+        "symbol": "R_50",
+        "contract": "DIGITODD",
+        "barrier": "2",
+        "hookEnabled": false,
+        "virtualLossCount": "3",
+        "realCount": "2"
+      },
+      "risk": {
+        "stake": "0.94",
+        "martingaleOn": true,
+        "martingaleMultiplier": "2.0",
+        "martingaleMaxSteps": "5",
+        "takeProfit": "2",
+        "stopLoss": "30"
+      },
+      "strategy": {
+        "m1Enabled": false,
+        "m2Enabled": false,
+        "m1Mode": "pattern",
+        "m2Mode": "pattern",
+        "m1Pattern": "",
+        "m1DigitCondition": "==",
+        "m1DigitCompare": "5",
+        "m1DigitWindow": "3",
+        "m2Pattern": "EEEEOOE",
+        "m2DigitCondition": "<=",
+        "m2DigitCompare": "1",
+        "m2DigitWindow": "3"
+      },
+      "scanner": { "active": false },
+      "turbo": { "enabled": false }
+    },
+    description: 'M1 trades DIGITOVER barrier 3 on 1HZ75V with Virtual Hook (3 virtual losses, 2 real counts). Scanner disabled.',
   },
   {
-    config: {"version":1,"botName":"Even/Odd Best Bot 2025-2027","m1":{"enabled":true,"symbol":"1HZ75V","contract":"DIGITEVEN","barrier":"5","hookEnabled":true,"virtualLossCount":"3","realCount":"1"},"m2":{"enabled":true,"symbol":"R_50","contract":"DIGITODD","barrier":"2","hookEnabled":false,"virtualLossCount":"3","realCount":"2"},"risk":{"stake":"0.94","martingaleOn":true,"martingaleMultiplier":"2.0","martingaleMaxSteps":"5","takeProfit":"2","stopLoss":"30"},"strategy":{"m1Enabled":false,"m2Enabled":true,"m1Mode":"pattern","m2Mode":"pattern","m1Pattern":"","m1DigitCondition":"==","m1DigitCompare":"5","m1DigitWindow":"3","m2Pattern":"EEEEOOE","m2DigitCondition":"<=","m2DigitCompare":"1","m2DigitWindow":"3"},"scanner":{"active":true},"turbo":{"enabled":false}},
-    description: 'M1 trades Even on V75 with Virtual Hook. M2 trades Odd pattern EEEEOOE on R50. Dual-market strategy.',
+    config: {
+      "version": 1,
+      "botName": "Even/Odd Best Bot 2025-2027",
+      "m1": {
+        "enabled": true,
+        "symbol": "1HZ75V",
+        "contract": "DIGITEVEN",
+        "barrier": "5",
+        "hookEnabled": true,
+        "virtualLossCount": "3",
+        "realCount": "1"
+      },
+      "m2": {
+        "enabled": true,
+        "symbol": "R_50",
+        "contract": "DIGITODD",
+        "barrier": "2",
+        "hookEnabled": false,
+        "virtualLossCount": "3",
+        "realCount": "2"
+      },
+      "risk": {
+        "stake": "0.94",
+        "martingaleOn": true,
+        "martingaleMultiplier": "2.0",
+        "martingaleMaxSteps": "5",
+        "takeProfit": "2",
+        "stopLoss": "30"
+      },
+      "strategy": {
+        "m1Enabled": false,
+        "m2Enabled": true,
+        "m1Mode": "pattern",
+        "m2Mode": "pattern",
+        "m1Pattern": "",
+        "m1DigitCondition": "==",
+        "m1DigitCompare": "5",
+        "m1DigitWindow": "3",
+        "m2Pattern": "EEEEOOE",
+        "m2DigitCondition": "<=",
+        "m2DigitCompare": "1",
+        "m2DigitWindow": "3"
+      },
+      "scanner": { "active": true },
+      "turbo": { "enabled": false }
+    },
+    description: 'Dual-market bot: M1 trades EVEN on 1HZ75V (barrier 5, Virtual Hook). M2 trades ODD pattern EEEEOOE on R_50.',
   },
   {
-    config: {"version":1,"botName":"All Markets Scunner Volatility Over 2 bot","m1":{"enabled":false,"symbol":"R_100","contract":"DIGITEVEN","barrier":"5","hookEnabled":false,"virtualLossCount":"3","realCount":"2"},"m2":{"enabled":true,"symbol":"R_50","contract":"DIGITOVER","barrier":"2","hookEnabled":false,"virtualLossCount":"3","realCount":"2"},"risk":{"stake":"0.94","martingaleOn":true,"martingaleMultiplier":"2.0","martingaleMaxSteps":"5","takeProfit":"2","stopLoss":"30"},"strategy":{"m1Enabled":false,"m2Enabled":true,"m1Mode":"pattern","m2Mode":"digit","m1Pattern":"","m1DigitCondition":"==","m1DigitCompare":"5","m1DigitWindow":"3","m2Pattern":"","m2DigitCondition":"<=","m2DigitCompare":"1","m2DigitWindow":"3"},"scanner":{"active":true},"turbo":{"enabled":false}},
-    description: 'M2 trades Over 2 on R_50 with digit strategy (last 3 digits ≤ 1). Clean volatility setup with scanner.',
+    config: {
+      "version": 1,
+      "botName": "All Markets Scunner Volatility Over 2 bot",
+      "m1": {
+        "enabled": false,
+        "symbol": "R_100",
+        "contract": "DIGITEVEN",
+        "barrier": "5",
+        "hookEnabled": false,
+        "virtualLossCount": "3",
+        "realCount": "2"
+      },
+      "m2": {
+        "enabled": true,
+        "symbol": "R_50",
+        "contract": "DIGITOVER",
+        "barrier": "2",
+        "hookEnabled": false,
+        "virtualLossCount": "3",
+        "realCount": "2"
+      },
+      "risk": {
+        "stake": "0.94",
+        "martingaleOn": true,
+        "martingaleMultiplier": "2.0",
+        "martingaleMaxSteps": "5",
+        "takeProfit": "2",
+        "stopLoss": "30"
+      },
+      "strategy": {
+        "m1Enabled": false,
+        "m2Enabled": true,
+        "m1Mode": "pattern",
+        "m2Mode": "digit",
+        "m1Pattern": "",
+        "m1DigitCondition": "==",
+        "m1DigitCompare": "5",
+        "m1DigitWindow": "3",
+        "m2Pattern": "",
+        "m2DigitCondition": "<=",
+        "m2DigitCompare": "1",
+        "m2DigitWindow": "3"
+      },
+      "scanner": { "active": true },
+      "turbo": { "enabled": false }
+    },
+    description: 'M2 trades OVER barrier 2 on R_50 with digit strategy (last 3 digits ≤ 1). Scanner active for market analysis.',
   },
 ];
 
