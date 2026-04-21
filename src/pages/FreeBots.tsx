@@ -1,3 +1,4 @@
+// free-bot-templates-page.tsx
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { type BotConfig } from '@/components/bot-config/ConfigPreview';
